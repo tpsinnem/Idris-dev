@@ -17,12 +17,12 @@ class Preorder t (po : t -> t -> Type) where
   total transitive : (a : t) -> (b : t) -> (c : t) -> po a b -> po b c -> po a c
   total reflexive : (a : t) -> po a a
 
+--class (Preorder t po) => Poset t (po : t -> t -> Type) where
+--  total antisymmetric : (a : t) -> (b : t) -> po a b -> po b a -> a = b
+
 -- FIXME THINK is this correct?
 class (Preorder t lt) => PartialOrder t (lt : t -> t -> Type) where
   total antisymmetric : (a : t) -> (b : t) -> lt a b -> lt b a -> _|_
-
---class (Preorder t po) => Poset t (po : t -> t -> Type) where
---  total antisymmetric : (a : t) -> (b : t) -> po a b -> po b a -> a = b
 
 --  FIXME THINK do this via a 'Cmp' type instead of a bunch of negations?
 --  - Can it work?
@@ -31,13 +31,22 @@ class (Preorder t lt) => PartialOrder t (lt : t -> t -> Type) where
 --  - Should 't' be an explicit argument?
 --    - And then have the constraint down in the methods?
 --  - Kinda side note: I think I'll end up assuming people downstream will use
---    
+
+--  FIXME In the methods, do I need to further specify the type of ltT? (!!)
+--  - Or the types of a and b?
+--  - Just try if this thing typechecks and save the fretting for later?
+
 --data Cmp : (a : t) -> (b : t) -> Type where
---  FIXME In the methods, do I need to further specify the type of ltT?
-data Cmp : (t : Type) -> (a : t) -> (b : t) -> Type where
-  lt : (PartialOrder t ltT) =>  ltT a b -> Cmp t a b --  FIXME finish
-  eq : {a:t} -> {b:t}       ->  (a = b) -> Cmp t a b
-  gt : (PartialOrder t ltT) =>  ltT b a -> Cmp t a b
+
+--data Cmp : (t : Type) -> (a : t) -> (b : t) -> Type where
+--  lt : (PartialOrder t ltT) =>  ltT a b -> Cmp t a b --  FIXME finish
+--  eq : {a:t} -> {b:t}       ->  (a = b) -> Cmp t a b
+--  gt : (PartialOrder t ltT) =>  ltT b a -> Cmp t a b
+
+data Cmp : (t -> t -> Type) -> (a : t) -> (b : t) -> Type where
+  lt : (PartialOrder t ltT) =>                    ltT a b -> Cmp ltT a b
+  eq : (PartialOrder t ltT) => {a:t} -> {b:t} ->  (a = b) -> Cmp ltT a b
+  gt : (PartialOrder t ltT) =>                    ltT b a -> Cmp ltT a b
 
 --  FIXME do I need typeclass constraints in the orderTotal method or such?
 --  FIXME why do I suddently feel like I wouldn't even need the PartialOrder
@@ -58,8 +67,20 @@ data Cmp : (t : Type) -> (a : t) -> (b : t) -> Type where
 --      going for a short while without being aware of a problem.
 --    - BTW can I avoid having as much as four parameters on Cmp by not having
 --      't' once I've added 'ltT'?
+
+--class (PartialOrder t ltT) => Order t (ltT : t -> t -> Type) where
+--  total orderTotal : (a : t) -> (b : t) -> Cmp t a b
+
+--  FIXME again, do I need further specification of 'ltT'?
+--  FIXME SANITY CHECK are 't' and 'ltT', in the methods, bound to the class parameters? (!!)
+--  - Will the idris tutorial be enough for a clue or do I need to play around with this?
+--  - I'm pretty sure they are thusly bound.
+--  SANITY CHECK is the use of 'Cmp' the right thing to do here?
 class (PartialOrder t ltT) => Order t (ltT : t -> t -> Type) where
-  total orderTotal : (a : t) -> (b : t) -> Cmp t a b
+  total orderTotal : (a : t) -> (b : t) -> Cmp ltT a b
+
+-- TODO adapt everything below
+
 --------------------------------------------------------------------------------
 -- Natural numbers
 --------------------------------------------------------------------------------
