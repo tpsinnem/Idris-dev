@@ -14,12 +14,16 @@ import Decidable.Equality
 -- Preorders and Posets
 --------------------------------------------------------------------------------
 
+--  FIXME STOP PRESS I need an *irreflexive* strict preorder, and the other
+--  classes to build on that. I will be doing preparatory work on this on a
+--  'RelationProperties' branch and then merge that stuff here and fix this
+--  presently incorrect code. (!!!!)
 class Preorder t (po : t -> t -> Type) where
   total transitive : (a : t) -> (b : t) -> (c : t) -> po a b -> po b c -> po a c
   total reflexive : (a : t) -> po a a
 
 class (Preorder t ltT) => PartialOrder t (ltT : t -> t -> Type) where
-  total antisymmetric : (a : t) -> (b : t) -> ltT a b -> ltT b a -> _|_
+  total asymmetric : (a : t) -> (b : t) -> ltT a b -> ltT b a -> _|_
 
 --  A 'safety corollary' for PartialOrder
 --  - Wait a minute, should I be utilizing idris-mode magic here? (!!!)
@@ -28,7 +32,7 @@ class (Preorder t ltT) => PartialOrder t (ltT : t -> t -> Type) where
 total 
 notEqAndLT : (PartialOrder t ltT) => (a : t) -> (b : t) -> 
              (a = b) -> ltT a b -> _|_
-notEqAndLT a a refl ltT = antisymmetric a a ltT ltT
+notEqAndLT a a refl ltT = asymmetric a a ltT ltT
 
 data Cmp : (t -> t -> Type) -> (a : t) -> (b : t) -> Type where
   cmpLT : (PartialOrder t ltT) =>                    ltT a b -> Cmp ltT a b
@@ -46,6 +50,16 @@ class (PartialOrder t ltT) => Order t (ltT : t -> t -> Type) where
 --------------------------------------------------------------------------------
 -- Natural numbers
 --------------------------------------------------------------------------------
+
+--  FIXME think again on the names of constructors here.
+--  - Seem ok now?
+data NatLT : Nat -> Nat -> Type where
+  nLTsn     : NatLT n (S n)
+  nLTmLTsm  : NatLT n m -> NatLT n (S m)
+
+--  FIXME complete, once the strict/weak order issue is fixed.
+total NatLTIsTransitive : (m : Nat) -> (n : Nat) -> (o : Nat) ->
+                          NatLT m n -> NatLT n o -> NatLT m o
 
 {-
 
