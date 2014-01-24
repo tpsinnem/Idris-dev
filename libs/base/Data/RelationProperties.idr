@@ -2,11 +2,12 @@ module Data.RelationProperties
 
 %default total
 
---  Trying to use the 'rel' via the 'using' declaration results in this error
---  for each class:
+--  Side note: At the moment, trying to use the 'rel' via the 'using'
+--  declaration results in this error for each class:
 --    rel does not have a function type (Type)
 
-using (a:t, b:t, c:t {-, rel : t -> t -> Type -})
+--using (a:t, b:t, c:t, rel : t -> t -> Type)
+using (a:t, b:t, c:t)
 
   class Reflexive t (rel : t -> t -> Type) where
     reflexive     : rel a a
