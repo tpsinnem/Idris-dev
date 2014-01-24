@@ -16,16 +16,6 @@ import Data.RelationProperties
 -- Preorders and Posets
 --------------------------------------------------------------------------------
 
---  FIXME STOP PRESS I need an *irreflexive* strict preorder, and the other
---  classes to build on that. I will be doing preparatory work on this on a
---  'RelationProperties' branch and then merge that stuff here and fix this
---  presently incorrect code. (!!!!)
---  - On second thought, maybe I shouldn't use a 'RelationProperties'. Now I'm
---    thinking these types might just be better always written out explicitly,
---    and thus a file collecting them and names for them might just be moot.
---    - On third thought maybe I should, for consistency's sake, because for
---      more complex properties I will want to do this anyway.
-
 class (Transitive t po, Reflexive t po) =>
   PreorderWeak t (po : t -> t -> Type)
 
@@ -49,16 +39,6 @@ class (PartialOrderStrict t lt0) =>
   OrderStrict t (lt0 : t -> t -> Type) where
   total orderTotalStrict : (a : t) -> (b : t) -> Cmp lt0 a b
 
---class Preorder t (po : t -> t -> Type) where
---  total transitive : (a : t) -> (b : t) -> (c : t) -> po a b -> po b c -> po a c
---  total reflexive : (a : t) -> po a a
-
---class (Preorder t po) => Poset t (po : t -> t -> Type) where
---  total antisymmetric : (a : t) -> (b : t) -> po a b -> po b a -> a = b
-
---class (Preorder t ltT) => PartialOrder t (ltT : t -> t -> Type) where
---  total asymmetric : (a : t) -> (b : t) -> ltT a b -> ltT b a -> _|_
-
 --  A 'safety corollary' for PartialOrder
 --  - Wait a minute, should I be utilizing idris-mode magic here? (!!!)
 --    - Well let me just try things in the old grueling way first.
@@ -67,17 +47,6 @@ class (PartialOrderStrict t lt0) =>
 --notEqAndLT : (PartialOrder t ltT) => (a : t) -> (b : t) -> 
 --             (a = b) -> ltT a b -> _|_
 --notEqAndLT a a refl ltT = asymmetric a a ltT ltT
-
---data Cmp : (t -> t -> Type) -> (a : t) -> (b : t) -> Type where
---  cmpLT : (PartialOrder t ltT) =>                    ltT a b -> Cmp ltT a b
---  cmpEq : (PartialOrder t ltT) => {a:t} -> {b:t} ->  (a = b) -> Cmp ltT a b
---  cmpGT : (PartialOrder t ltT) =>                    ltT b a -> Cmp ltT a b
-
---class (PartialOrder t ltT) => Order t (ltT : t -> t -> Type) where
---  total orderTotal : (a : t) -> (b : t) -> Cmp ltT a b
-
---  Re: Order:
-  --  SANITY CHECK is the use of 'Cmp' the right thing to do here?
 
 -- TODO adapt everything below
 
