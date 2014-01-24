@@ -21,6 +21,8 @@ import Decidable.Equality
 --  - On second thought, maybe I shouldn't use a 'RelationProperties'. Now I'm
 --    thinking these types might just be better always written out explicitly,
 --    and thus a file collecting them and names for them might just be moot.
+--    - On third thought maybe I should, for consistency's sake, because for
+--      more complex properties I will want to do this anyway.
 
 class Preorder t (po : t -> t -> Type) where
   total transitive : (a : t) -> (b : t) -> (c : t) -> po a b -> po b c -> po a c
