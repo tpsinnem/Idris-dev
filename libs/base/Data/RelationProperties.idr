@@ -1,12 +1,5 @@
 module Data.RelationProperties
 
---  THINK:
---  - Might 'Reflexivity' etc. be preferred for class names and/or method
---    names?
---    - Kind of a non-issue?
---  - Could the terms '(a:t)' etc. be reasonably taken implicitly?
---    - Now using 'using'.
-
 %default total
 
 --  Trying to use the 'rel' via the 'using' declaration results in this error
