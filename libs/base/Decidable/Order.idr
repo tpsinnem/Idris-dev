@@ -48,28 +48,26 @@ class (PartialOrderStrict t lt0) =>
 --             (a = b) -> ltT a b -> _|_
 --notEqAndLT a a refl ltT = asymmetric a a ltT ltT
 
--- TODO adapt everything below
+-- TODO adapt NatLTE etc. code to the new classes.
 
 --------------------------------------------------------------------------------
 -- Natural numbers
 --------------------------------------------------------------------------------
 
---  FIXME think again on the names of constructors here.
---  - Seem ok now?
 data NatLT : Nat -> Nat -> Type where
   nLTsn     : NatLT n (S n)
   nLTmLTsm  : NatLT n m -> NatLT n (S m)
 
---  FIXME complete, once the strict/weak order issue is fixed.
-total NatLTIsTransitive : (m : Nat) -> (n : Nat) -> (o : Nat) ->
-                          NatLT m n -> NatLT n o -> NatLT m o
+--  FIXME complete:
+total
+NatLTIsTransitive : (m : Nat) -> (n : Nat) -> (o : Nat) ->
+                    NatLT m n -> NatLT n o -> NatLT m o
 
 {-
 
 data NatLTE : Nat -> Nat -> Type where
   nEqn   : NatLTE n n
   nLTESm : NatLTE n m -> NatLTE n (S m)
-     NatLTE = ?NatLTE_rhs
 
 total NatLTEIsTransitive : (m : Nat) -> (n : Nat) -> (o : Nat) ->
                            NatLTE m n -> NatLTE n o ->
