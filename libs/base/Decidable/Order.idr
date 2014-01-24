@@ -2,6 +2,8 @@ module Decidable.Order
 
 import Decidable.Decidable
 import Decidable.Equality
+import Data.RelationProperties
+
 
 %access public
 
@@ -24,32 +26,55 @@ import Decidable.Equality
 --    - On third thought maybe I should, for consistency's sake, because for
 --      more complex properties I will want to do this anyway.
 
-class Preorder t (po : t -> t -> Type) where
-  total transitive : (a : t) -> (b : t) -> (c : t) -> po a b -> po b c -> po a c
-  total reflexive : (a : t) -> po a a
+class (Transitive t po, Reflexive t po) =>
+  PreorderWeak t (po : t -> t -> Type)
+
+class (PreorderWeak t lte0, Antisymmetric t lte0) =>
+  PartialOrderWeak t (lte0 : t -> t -> Type)
+
+--  Total order on top of PartialOrderWeak?
+
+class (Transitive t po, Irreflexive t po) =>
+  PreorderStrict t (po : t -> t -> Type)
+
+class (PreorderStrict t lt0, Asymmetric t lt0) =>
+  PartialOrderStrict t (lt0 : t -> t -> Type)
+  
+data Cmp : (t -> t -> Type) -> (a : t) -> (b : t) -> Type where
+  cmpLT : (PartialOrderStrict t lt0) =>                    lt0 a b -> Cmp lt0 a b
+  cmpEq : (PartialOrderStrict t lt0) => {a:t} -> {b:t} ->  (a = b) -> Cmp lt0 a b
+  cmpGT : (PartialOrderStrict t lt0) =>                    lt0 b a -> Cmp lt0 a b
+
+class (PartialOrderStrict t lt0) =>
+  OrderStrict t (lt0 : t -> t -> Type) where
+  total orderTotalStrict : (a : t) -> (b : t) -> Cmp lt0 a b
+
+--class Preorder t (po : t -> t -> Type) where
+--  total transitive : (a : t) -> (b : t) -> (c : t) -> po a b -> po b c -> po a c
+--  total reflexive : (a : t) -> po a a
 
 --class (Preorder t po) => Poset t (po : t -> t -> Type) where
 --  total antisymmetric : (a : t) -> (b : t) -> po a b -> po b a -> a = b
 
-class (Preorder t ltT) => PartialOrder t (ltT : t -> t -> Type) where
-  total asymmetric : (a : t) -> (b : t) -> ltT a b -> ltT b a -> _|_
+--class (Preorder t ltT) => PartialOrder t (ltT : t -> t -> Type) where
+--  total asymmetric : (a : t) -> (b : t) -> ltT a b -> ltT b a -> _|_
 
 --  A 'safety corollary' for PartialOrder
 --  - Wait a minute, should I be utilizing idris-mode magic here? (!!!)
 --    - Well let me just try things in the old grueling way first.
 --  FIXME does this belong somewhere else?
-total 
-notEqAndLT : (PartialOrder t ltT) => (a : t) -> (b : t) -> 
-             (a = b) -> ltT a b -> _|_
-notEqAndLT a a refl ltT = asymmetric a a ltT ltT
+--total 
+--notEqAndLT : (PartialOrder t ltT) => (a : t) -> (b : t) -> 
+--             (a = b) -> ltT a b -> _|_
+--notEqAndLT a a refl ltT = asymmetric a a ltT ltT
 
-data Cmp : (t -> t -> Type) -> (a : t) -> (b : t) -> Type where
-  cmpLT : (PartialOrder t ltT) =>                    ltT a b -> Cmp ltT a b
-  cmpEq : (PartialOrder t ltT) => {a:t} -> {b:t} ->  (a = b) -> Cmp ltT a b
-  cmpGT : (PartialOrder t ltT) =>                    ltT b a -> Cmp ltT a b
+--data Cmp : (t -> t -> Type) -> (a : t) -> (b : t) -> Type where
+--  cmpLT : (PartialOrder t ltT) =>                    ltT a b -> Cmp ltT a b
+--  cmpEq : (PartialOrder t ltT) => {a:t} -> {b:t} ->  (a = b) -> Cmp ltT a b
+--  cmpGT : (PartialOrder t ltT) =>                    ltT b a -> Cmp ltT a b
 
-class (PartialOrder t ltT) => Order t (ltT : t -> t -> Type) where
-  total orderTotal : (a : t) -> (b : t) -> Cmp ltT a b
+--class (PartialOrder t ltT) => Order t (ltT : t -> t -> Type) where
+--  total orderTotal : (a : t) -> (b : t) -> Cmp ltT a b
 
 --  Re: Order:
   --  SANITY CHECK is the use of 'Cmp' the right thing to do here?
@@ -75,6 +100,7 @@ total NatLTIsTransitive : (m : Nat) -> (n : Nat) -> (o : Nat) ->
 data NatLTE : Nat -> Nat -> Type where
   nEqn   : NatLTE n n
   nLTESm : NatLTE n m -> NatLTE n (S m)
+     NatLTE = ?NatLTE_rhs
 
 total NatLTEIsTransitive : (m : Nat) -> (n : Nat) -> (o : Nat) ->
                            NatLTE m n -> NatLTE n o ->
