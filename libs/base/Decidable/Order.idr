@@ -18,9 +18,16 @@ import Decidable.Equality
 --  classes to build on that. I will be doing preparatory work on this on a
 --  'RelationProperties' branch and then merge that stuff here and fix this
 --  presently incorrect code. (!!!!)
+--  - On second thought, maybe I shouldn't use a 'RelationProperties'. Now I'm
+--    thinking these types might just be better always written out explicitly,
+--    and thus a file collecting them and names for them might just be moot.
+
 class Preorder t (po : t -> t -> Type) where
   total transitive : (a : t) -> (b : t) -> (c : t) -> po a b -> po b c -> po a c
   total reflexive : (a : t) -> po a a
+
+--class (Preorder t po) => Poset t (po : t -> t -> Type) where
+--  total antisymmetric : (a : t) -> (b : t) -> po a b -> po b a -> a = b
 
 class (Preorder t ltT) => PartialOrder t (ltT : t -> t -> Type) where
   total asymmetric : (a : t) -> (b : t) -> ltT a b -> ltT b a -> _|_
