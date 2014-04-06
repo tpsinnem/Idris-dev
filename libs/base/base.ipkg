@@ -14,7 +14,7 @@ modules = System,
 
           Language.Reflection, Language.Reflection.Utils, Language.Reflection.Errors,
 
-          Syntax.PreorderReasoning,
+          Syntax.PreorderReasoning, Syntax.ImplicitDecisionParams,
 
           Data.Morphisms,
           Data.Bits, Data.Mod2,
