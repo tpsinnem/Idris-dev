@@ -22,7 +22,6 @@ syntax "{{" [prfname] ":" "reject" [dec] "}}" "->" [ret]
 argsAreSame : (n:Nat) -> (m:Nat) -> {{ same : accept (decEq n m) }} -> ()
 argsAreSame _ _ = ()
 
-
 argsAreDiff : (n:Nat) -> (m:Nat) -> {{ diff : reject (decEq n m) }} -> ()
 argsAreDiff _ _ = ()
 
