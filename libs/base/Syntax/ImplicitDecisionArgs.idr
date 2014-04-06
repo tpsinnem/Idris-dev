@@ -23,9 +23,14 @@ syntax "{{" [prfname] ":" "reject" [dec] "}}" "->" [ret]
 argsAreSame : (n:Nat) -> (m:Nat) -> {{ same : accept (decEq n m) }} -> ()
 argsAreSame _ _ = ()
 
-argsAreDiff : (n:Nat) -> (m:Nat) -> {{ diff : reject (decEq m n) }} -> ()
+argsAreDiff : (n:Nat) -> (m:Nat) -> {{ diff : reject (decEq n m) }} -> ()
 argsAreDiff _ _ = ()
 
+--  *Example> argsAreSame
+--  argsAreSame : (n : Nat) -> (m : Nat) -> (n = m) -> ()
+--
+--  *Example> argsAreDiff
+--  argsAreDiff : (n : Nat) -> (m : Nat) -> ((n = m) -> _|_) -> ()
 
 zArgsAreSame : ()
 zArgsAreSame = argsAreSame Z Z

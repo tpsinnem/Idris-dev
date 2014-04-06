@@ -19,13 +19,11 @@ syntax "{{" [prfname] ":" "reject" [dec] "}}" "->" [ret]
   = { default (decProof dec) prfname : DecType dec -> _|_ } -> ret
 
 
-argsAreSame : (n:Nat) -> (m:Nat)
-              -> {{ same : accept (decEq n m) }} -> ()
+argsAreSame : (n:Nat) -> (m:Nat) -> {{ same : accept (decEq n m) }} -> ()
 argsAreSame _ _ = ()
 
 
-argsAreDiff : (n:Nat) -> (m:Nat)
-              -> {{ diff : reject (decEq m n) }} -> ()
+argsAreDiff : (n:Nat) -> (m:Nat) -> {{ diff : reject (decEq n m) }} -> ()
 argsAreDiff _ _ = ()
 
 
