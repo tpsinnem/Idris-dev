@@ -1,6 +1,6 @@
 module Syntax.ImplicitDecisionArgs
 
-import Data.DecProof
+import Data.DecYesNo
 
 %default total
 
@@ -8,11 +8,11 @@ import Data.DecProof
 --  Syntax rules for Dec-based default arguments:
 --------------------------------------------------
 
-syntax "{{" [prfname] ":" "accept" [dec] "}}" "->" [ret] 
-  = { default (decProof dec) prfname : DecType dec } -> ret
+syntax "{{" [proofname] ":" "yes" [dec] "}}" "->" [ret] 
+  = { default (decYes dec) proofname : decType dec } -> ret
 
-syntax "{{" [prfname] ":" "reject" [dec] "}}" "->" [ret] 
-  = { default (decProof dec) prfname : DecType dec -> _|_ } -> ret
+syntax "{{" [proofname] ":" "no" [dec] "}}" "->" [ret] 
+  = { default (decNo dec) proofname : decType dec -> _|_ } -> ret
 
 -------------
 --  Example:
@@ -20,10 +20,10 @@ syntax "{{" [prfname] ":" "reject" [dec] "}}" "->" [ret]
 
 {-
 
-argsAreSame : (n:Nat) -> (m:Nat) -> {{ same : accept (decEq n m) }} -> ()
+argsAreSame : (n:Nat) -> (m:Nat) -> {{ same : yes (decEq n m) }} -> ()
 argsAreSame _ _ = ()
 
-argsAreDiff : (n:Nat) -> (m:Nat) -> {{ diff : reject (decEq n m) }} -> ()
+argsAreDiff : (n:Nat) -> (m:Nat) -> {{ diff : no (decEq n m) }} -> ()
 argsAreDiff _ _ = ()
 
 --  *Example> argsAreSame
