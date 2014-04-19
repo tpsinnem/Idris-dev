@@ -30,14 +30,16 @@ help =
     ([":miss", ":missing"], NameArg, "Show missing clauses"),
     ([":doc"], NameArg, "Show internal documentation"),
     ([":apropos"], NoArg, "Search names, types, and documentation"),
+    ([":whocalls", ":wc"], NameArg, "List the callers of some name"),
+    ([":callswho", ":cw"], NameArg, "List the callees of some name"),
     ([":i", ":info"], NameArg, "Display information about a type class"),
     ([":total"], NameArg, "Check the totality of a name"),
     ([":r",":reload"], NoArg, "Reload current file"),
     ([":l",":load"], FileArg, "Load a new file"),
     ([":cd"], FileArg, "Change working directory"),
-    ([":m",":module"], ModuleArg, "Import an extra module"), -- NOTE: dragons
+    ([":module"], ModuleArg, "Import an extra module"), -- NOTE: dragons
     ([":e",":edit"], NoArg, "Edit current file using $EDITOR or $VISUAL"),
-    ([":m",":metavars"], MetaVarArg, "Show remaining proof obligations (metavariables)"),
+    ([":m",":metavars"], NoArg, "Show remaining proof obligations (metavariables)"),
     ([":p",":prove"], MetaVarArg, "Prove a metavariable"),
     ([":a",":addproof"], NameArg, "Add proof to source file"),
     ([":rmproof"], NameArg, "Remove proof from proof stack"),

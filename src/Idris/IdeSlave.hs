@@ -145,13 +145,15 @@ data IdeSlaveCommand = REPLCompletions String
                      | AddProofClause Int String
                      | AddMissing Int String
                      | MakeWithBlock Int String
-                     | ProofSearch Int String [String]
+                     | ProofSearch Bool Int String [String]
                      | LoadFile String
                      | DocsFor String
                      | Apropos String
                      | GetOpts
                      | SetOpt Opt Bool
-  deriving Show
+                     | Metavariables Int -- ^^ the Int is the column count for pretty-printing
+                     | WhoCalls String
+                     | CallsWho String
 
 sexpToCommand :: SExp -> Maybe IdeSlaveCommand
 sexpToCommand (SexpList (x:[]))                                                         = sexpToCommand x
@@ -164,7 +166,10 @@ sexpToCommand (SexpList [SymbolAtom "add-clause", IntegerAtom line, StringAtom n
 sexpToCommand (SexpList [SymbolAtom "add-proof-clause", IntegerAtom line, StringAtom name])   = Just (AddProofClause (fromInteger line) name)
 sexpToCommand (SexpList [SymbolAtom "add-missing", IntegerAtom line, StringAtom name])  = Just (AddMissing (fromInteger line) name)
 sexpToCommand (SexpList [SymbolAtom "make-with", IntegerAtom line, StringAtom name])    = Just (MakeWithBlock (fromInteger line) name)
-sexpToCommand (SexpList [SymbolAtom "proof-search", IntegerAtom line, StringAtom name, SexpList hintexp]) | Just hints <- getHints hintexp = Just (ProofSearch (fromInteger line) name hints)
+-- XXX: The Boolean in ProofSearch means "search recursively"
+-- If it's False, that means "refine", i.e. apply the name and fill in any
+-- arguments which can be done by unification.
+sexpToCommand (SexpList [SymbolAtom "proof-search", IntegerAtom line, StringAtom name, SexpList hintexp]) | Just hints <- getHints hintexp = Just (ProofSearch True (fromInteger line) name hints)
   where getHints = mapM (\h -> case h of
                                  StringAtom s -> Just s
                                  _            -> Nothing)
@@ -174,6 +179,9 @@ sexpToCommand (SymbolAtom "get-options")                                        
 sexpToCommand (SexpList [SymbolAtom "set-option", SymbolAtom s, BoolAtom b])
   | Just opt <- lookup s opts                                                           = Just (SetOpt opt b)
     where opts = [("show-implicits", ShowImpl), ("error-context", ErrContext)] --TODO support more
+sexpToCommand (SexpList [SymbolAtom "metavariables", IntegerAtom cols])                 = Just (Metavariables (fromIntegral cols))
+sexpToCommand (SexpList [SymbolAtom "who-calls", StringAtom name])                      = Just (WhoCalls name)
+sexpToCommand (SexpList [SymbolAtom "calls-who", StringAtom name])                      = Just (CallsWho name)
 sexpToCommand _                                                                         = Nothing
 
 parseMessage :: String -> Either Err (SExp, Integer)

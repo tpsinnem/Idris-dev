@@ -227,6 +227,9 @@ Extra-source-files:
                        test/reg038/run
                        test/reg038/*.idr
                        test/reg038/expected
+                       test/reg039/run
+                       test/reg039/*.idr
+                       test/reg039/expected
 
                        test/basic001/run
                        test/basic001/*.idr
@@ -321,6 +324,10 @@ Extra-source-files:
                        test/interactive003/input
                        test/interactive003/*.idr
                        test/interactive003/expected
+                       test/interactive004/run
+                       test/interactive004/input
+                       test/interactive004/*.idr
+                       test/interactive004/expected
 
                        test/io001/run
                        test/io001/*.idr
@@ -456,6 +463,7 @@ Library
                 , Idris.AbsSyntax
                 , Idris.AbsSyntaxTree
                 , Idris.Apropos
+                , Idris.ASTUtils
                 , Idris.CaseSplit
                 , Idris.Chaser
                 , Idris.Colours
@@ -469,6 +477,7 @@ Library
                 , Idris.Docstrings
                 , Idris.ElabDecls
                 , Idris.ElabTerm
+                , Idris.Erasure
                 , Idris.Error
                 , Idris.ErrReverse
                 , Idris.Help
@@ -491,7 +500,7 @@ Library
                 , Idris.REPLParser
                 , Idris.Transforms
                 , Idris.Unlit
-                , Idris.UnusedArgs
+                , Idris.WhoCalls
 
                 , IRTS.BCImp
                 , IRTS.Bytecode

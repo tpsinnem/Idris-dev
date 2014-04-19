@@ -388,6 +388,16 @@ getIState = get
 putIState :: IState -> Idris ()
 putIState = put
 
+withContext :: (IState -> Ctxt a) -> Name -> b -> (a -> Idris b) -> Idris b
+withContext ctx name dflt action = do
+    ist <- getIState
+    case lookupCtxt name (ctx ist) of
+        [x] -> action x
+        _   -> return dflt
+
+withContext_ :: (IState -> Ctxt a) -> Name -> (a -> Idris ()) -> Idris ()
+withContext_ ctx name action = withContext ctx name () action
+
 -- | A version of liftIO that puts errors into the exception type of the Idris monad
 runIO :: IO a -> Idris a
 runIO x = liftIO (tryIOError x) >>= either (throwError . Msg . show) return
@@ -1129,7 +1139,7 @@ implicit' info syn ignore n ptm
 
     notFound :: [Name] -> [Name] -> Maybe Name
     notFound kns [] = Nothing
-    notFound kns (SN (WhereN _ _ _) : ns) = notFound kns ns -- Known already
+    notFound kns (SN (WhereN _ _ _) : ns) = notFound kns ns --  Known already
     notFound kns (n:ns) = if elem n kns then notFound kns ns else Just n
 
 implicitise :: SyntaxInfo -> [Name] -> IState -> PTerm -> (PTerm, [PArg])

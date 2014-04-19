@@ -87,8 +87,13 @@ pCmd = do P.whiteSpace; try (do cmd ["q", "quit"]; eof; return Quit)
               <|> try (do cmd ["ps", "proofsearch"]; P.whiteSpace;
                           upd <- option False (do P.lchar '!'; return True)
                           l <- P.natural; n <- P.name;
-                          hints <- many P.name
-                          return (DoProofSearch upd (fromInteger l) n hints))
+                          hints <- many P.fnName
+                          return (DoProofSearch upd True (fromInteger l) n hints))
+              <|> try (do cmd ["ref", "refine"]; P.whiteSpace;
+                          upd <- option False (do P.lchar '!'; return True)
+                          l <- P.natural; n <- P.name;
+                          hint <- P.fnName
+                          return (DoProofSearch upd False (fromInteger l) n [hint]))
               <|> try (do cmd ["p", "prove"]; n <- P.name; eof; return (Prove n))
               <|> try (do cmd ["m", "metavars"]; eof; return Metavars)
               <|> try (do cmd ["a", "addproof"]; do n <- option Nothing (do x <- P.name;
@@ -99,6 +104,8 @@ pCmd = do P.whiteSpace; try (do cmd ["q", "quit"]; eof; return Quit)
               <|> try (do cmd ["errorhandlers"]; eof ; return ListErrorHandlers)
               <|> try (do cmd ["consolewidth"]; w <- pConsoleWidth ; return (SetConsoleWidth w))
               <|> try (do cmd ["apropos"]; str <- many anyChar ; return (Apropos str))
+              <|> try (do cmd ["wc", "whocalls"]; P.whiteSpace; n <- P.fnName ; return (WhoCalls n))
+              <|> try (do cmd ["cw", "callswho"]; P.whiteSpace; n <- P.fnName ; return (CallsWho n))
               <|> do P.whiteSpace; do eof; return NOP
                              <|> do t <- P.fullExpr defaultSyntax; return (Eval t)
 

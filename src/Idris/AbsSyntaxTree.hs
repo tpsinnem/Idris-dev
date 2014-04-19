@@ -165,7 +165,10 @@ data IState = IState {
     idris_nameIdx :: (Int, Ctxt (Int, Name)),
     idris_function_errorhandlers :: Ctxt (M.Map Name (S.Set Name)), -- ^ Specific error handlers
     module_aliases :: M.Map [T.Text] [T.Text],
-    idris_consolewidth :: ConsoleWidth -- ^ How many chars wide is the console?
+    idris_consolewidth :: ConsoleWidth, -- ^ How many chars wide is the console?
+    idris_postulates :: S.Set Name,
+    idris_whocalls :: Maybe (M.Map Name [Name]),
+    idris_callswho :: Maybe (M.Map Name [Name])
    }
 
 data SizeChange = Smaller | Same | Bigger | Unknown
@@ -176,12 +179,13 @@ deriving instance NFData SizeChange
 !-}
 
 type SCGEntry = (Name, [Maybe (Int, SizeChange)])
+type UsageReason = (Name, Int)  -- fn_name, its_arg_number
 
 data CGInfo = CGInfo { argsdef :: [Name],
                        calls :: [(Name, [[Name]])],
                        scg :: [SCGEntry],
                        argsused :: [Name],
-                       unusedpos :: [Int] }
+                       usedpos :: [(Int, [UsageReason])] }
     deriving Show
 {-!
 deriving instance Binary CGInfo
@@ -225,6 +229,7 @@ data IBCWrite = IBCFix FixDecl
               | IBCLineApp FilePath Int PTerm
               | IBCErrorHandler Name
               | IBCFunctionErrorHandler Name Name Name
+              | IBCPostulate Name
   deriving Show
 
 -- | The initial state for the compiler
@@ -236,7 +241,7 @@ idrisInit = IState initContext [] [] emptyContext emptyContext emptyContext
                    [] [] defaultOpts 6 [] [] [] [] [] [] [] [] [] [] [] [] []
                    [] [] Nothing [] Nothing [] [] Nothing [] Hidden False [] Nothing [] [] RawOutput
                    True defaultTheme stdout [] (0, emptyContext) emptyContext M.empty
-                   AutomaticWidth
+                   AutomaticWidth S.empty Nothing Nothing
 
 -- | The monad for the main REPL - reading and processing files and updating
 -- global state (hence the IO inner monad).
@@ -292,7 +297,9 @@ data Command = Quit
              | AddProofClauseFrom Bool Int Name
              | AddMissing Bool Int Name
              | MakeWith Bool Int Name
-             | DoProofSearch Bool Int Name [Name]
+             | DoProofSearch Bool -- ^ update
+                             Bool -- ^ recursive (i.e. do arguments too) 
+                             Int Name [Name]
              | SetOpt Opt
              | UnsetOpt Opt
              | NOP
@@ -302,6 +309,8 @@ data Command = Quit
              | ListErrorHandlers
              | SetConsoleWidth ConsoleWidth
              | Apropos String
+             | WhoCalls Name
+             | CallsWho Name
 
 data Opt = Filename String
          | Ver
@@ -324,6 +333,7 @@ data Opt = Filename String
          | DefaultTotal
          | DefaultPartial
          | WarnPartial
+         | WarnReach
          | NoCoverage
          | ErrContext
          | ShowImpl
@@ -399,7 +409,7 @@ data Plicity = Imp { pargopts :: [ArgOpt],
                      pparam :: Bool }
              | Exp { pargopts :: [ArgOpt],
                      pstatic :: Static,
-                     pparam :: Bool }
+                     pparam :: Bool }   -- this is a param (rather than index)
              | Constraint { pargopts :: [ArgOpt],
                             pstatic :: Static }
              | TacImp { pargopts :: [ArgOpt],
@@ -407,15 +417,12 @@ data Plicity = Imp { pargopts :: [ArgOpt],
                         pscript :: PTerm }
   deriving (Show, Eq)
 
-plazy :: Plicity -> Bool
-plazy tm = Lazy `elem` pargopts tm
-
 {-!
 deriving instance Binary Plicity
 deriving instance NFData Plicity
 !-}
 
-impl = Imp [Lazy] Dynamic False
+impl = Imp [] Dynamic False
 expl = Exp [] Dynamic False
 expl_param = Exp [] Dynamic True
 constraint = Constraint [] Dynamic
@@ -705,7 +712,8 @@ data PTactic' t = Intro [Name] | Intros | Focus Name
                 | MatchRefine Name
                 | LetTac Name t | LetTacTy Name t t
                 | Exact t | Compute | Trivial | TCInstance
-                | ProofSearch (Maybe Name) [Name]
+                | ProofSearch Bool -- ^ recursive
+                              (Maybe Name) [Name]
                 | Solve
                 | Attack
                 | ProofState | ProofTerm | Undo
@@ -793,11 +801,8 @@ data PArg' t = PImp { priority :: Int,
                               getTm :: t }
     deriving (Show, Eq, Functor)
 
-data ArgOpt = Lazy | HideDisplay
+data ArgOpt = HideDisplay | InaccessibleArg
     deriving (Show, Eq)
-
-lazyarg :: PArg' t -> Bool
-lazyarg tm = Lazy `elem` argopts tm
 
 instance Sized a => Sized (PArg' a) where
   size (PImp p _ l nm trm) = 1 + size nm + size trm
@@ -810,10 +815,10 @@ deriving instance Binary PArg'
 deriving instance NFData PArg'
 !-}
 
-pimp n t mach = PImp 1 mach [Lazy] n t
+pimp n t mach = PImp 1 mach [] n t
 pexp t = PExp 1 [] (sMN 0 "arg") t
 pconst t = PConstraint 1 [] (sMN 0 "carg") t
-ptacimp n s t = PTacImplicit 2 [Lazy] n s t
+ptacimp n s t = PTacImplicit 2 [] n s t
 
 type PArg = PArg' PTerm
 
@@ -837,22 +842,8 @@ data TIData = TIPartial -- ^ a function with a partially defined type
             | TISolution [Term] -- ^ possible solutions to a metavariable in a type 
     deriving Show
 
--- An argument is conditionally forceable iff its forceability
--- depends on the collapsibility of the whole type.
-data Forceability = Conditional | Unconditional deriving (Show, Enum, Bounded, Eq, Ord)
-
-{-!
-deriving instance Binary Forceability
-deriving instance NFData Forceability
-!-}
-
-data OptInfo = Optimise { collapsible :: Bool,
-                          isnewtype :: Bool,
-                          -- The following should actually be (IntMap Forceability)
-                          -- but the corresponding Binary instance seems to be broken.
-                          -- Let's store a list and convert it to IntMap whenever needed.
-                          forceable :: [(Int, Forceability)],
-                          recursive :: [Int] }
+data OptInfo = Optimise { inaccessible :: [(Int,Name)],  -- includes names for error reporting 
+                          detaggable :: Bool }
     deriving Show
 {-!
 deriving instance Binary OptInfo
@@ -1125,10 +1116,9 @@ pprintPTerm impl bnd docArgs = prettySe 10 bnd
       prettySe 10 ((n, False):bnd) sc
     prettySe p bnd (PPi (Exp l s _) n ty sc)
       | n `elem` allNamesIn sc || impl || n `elem` docArgs =
-          let open = if Lazy `elem` l then text "|" <> lparen else lparen in
-            bracket p 2 . group $
-            enclose open rparen (group . align $ bindingOf n False <+> colon <+> prettySe 10 bnd ty) <+>
-            st <> text "->" <$> prettySe 10 ((n, False):bnd) sc
+          bracket p 2 . group $
+          enclose lparen rparen (group . align $ bindingOf n False <+> colon <+> prettySe 10 bnd ty) <+>
+          st <> text "->" <$> prettySe 10 ((n, False):bnd) sc
       | otherwise                      =
           bracket p 2 . group $
           group (prettySe 0 bnd ty <+> st) <> text "->" <$> group (prettySe 10 ((n, False):bnd) sc)
@@ -1139,10 +1129,9 @@ pprintPTerm impl bnd docArgs = prettySe 10 bnd
             _      -> empty
     prettySe p bnd (PPi (Imp l s _) n ty sc)
       | impl =
-          let open = if Lazy `elem` l then text "|" <> lbrace else lbrace in
-            bracket p 2 $
-            open <> bindingOf n True <+> colon <+> prettySe 10 bnd ty <> rbrace <+>
-            st <> text "->" </> prettySe 10 ((n, True):bnd) sc
+          bracket p 2 $
+          lparen <> bindingOf n True <+> colon <+> prettySe 10 bnd ty <> rbrace <+>
+          st <> text "->" </> prettySe 10 ((n, True):bnd) sc
       | otherwise = prettySe 10 ((n, True):bnd) sc
       where
         st =
@@ -1447,7 +1436,9 @@ showName ist bnd impl colour n = case ist of
 showTm :: IState -- ^^ the Idris state, for information about identifiers and colours
        -> PTerm  -- ^^ the term to show
        -> String
-showTm ist = displayDecorated (consoleDecorate ist) . renderCompact . prettyImp (opt_showimp (idris_options ist))
+showTm ist = displayDecorated (consoleDecorate ist) .
+             renderPretty 0.8 100000 .
+             prettyImp (opt_showimp (idris_options ist))
 
 -- | Show a term with implicits, no colours
 showTmImpls :: PTerm -> String
