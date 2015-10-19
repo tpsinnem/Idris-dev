@@ -1981,7 +1981,7 @@ aiFn topname inpat expat qq imp_meths ist fc f ffc ds as
     insertImpl ps as
         = let (as', badimpls) = partition (impIn ps) as in
               map addUnknownImp badimpls ++
-              insertImpl' M.empty ps (filter expArg as') (filter (not . expArg) as')
+              insertImpl' ps (filter expArg as') (filter (not . expArg) as')
 
     insertImpl' ::  [PArg]           -- parameters
                 ->  [PArg]           -- explicit arguments
