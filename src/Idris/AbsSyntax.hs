@@ -1981,41 +1981,40 @@ aiFn topname inpat expat qq imp_meths ist fc f ffc ds as
     insertImpl ps as
         = let (as', badimpls) = partition (impIn ps) as in
               map addUnknownImp badimpls ++
-              insImpAcc M.empty ps (filter expArg as') (filter (not . expArg) as')
+              insertImpl' M.empty ps (filter expArg as') (filter (not . expArg) as')
 
-    insImpAcc :: M.Map Name PTerm -- accumulated param names & arg terms
-              -> [PArg]           -- parameters
-              -> [PArg]           -- explicit arguments
-              -> [PArg]           -- implicits given
-              -> [PArg]
-    insImpAcc pnas (PExp p l n ty : ps) (PExp _ _ _ tm : given) imps =
-      PExp p l n tm : insImpAcc (M.insert n tm pnas) ps given imps
-    insImpAcc pnas (PConstraint p l n ty : ps) (PConstraint _ _ _ tm : given) imps =
-      PConstraint p l n tm : insImpAcc (M.insert n tm pnas) ps given imps
-    insImpAcc pnas (PConstraint p l n ty : ps) given imps =
+    insertImpl' ::  [PArg]           -- parameters
+                ->  [PArg]           -- explicit arguments
+                ->  [PArg]           -- implicits given
+                ->  [PArg]
+    insertImpl' (PExp p l n ty : ps) (PExp _ _ _ tm : given) imps =
+      PExp p l n tm : insertImpl' ps given imps
+    insertImpl' (PConstraint p l n ty : ps) (PConstraint _ _ _ tm : given) imps =
+      PConstraint p l n tm : insertImpl' ps given imps
+    insertImpl' (PConstraint p l n ty : ps) given imps =
       let rtc = PResolveTC fc in
-        PConstraint p l n rtc : insImpAcc (M.insert n rtc pnas) ps given imps
-    insImpAcc pnas (PImp p _ l n ty : ps) given imps =
+        PConstraint p l n rtc : insertImpl' ps given imps
+    insertImpl' (PImp p _ l n ty : ps) given imps =
         case find n imps [] of
             Just (tm, imps') ->
-              PImp p False l n tm : insImpAcc (M.insert n tm pnas) ps given imps'
-            Nothing ->
-              PImp p True l n Placeholder :
-                insImpAcc (M.insert n Placeholder pnas) ps given imps
-    insImpAcc pnas (PTacImplicit p l n sc' ty : ps) given imps =
-      let sc = addImpl imp_meths ist (substMatches (M.toList pnas) sc') in
-        case find n imps [] of
-            Just (tm, imps') ->
-              PTacImplicit p l n sc tm :
-                insImpAcc (M.insert n tm pnas) ps given imps'
+              PImp p False l n tm : insertImpl' ps given imps'
+            Nothing -> let ph = if f `elem` imp_meths then PRef fc [] n else Placeholder in
+              PImp p True l n ph :
+                insertImpl' ps given imps
+    insertImpl' (PTacImplicit p l n sc' ty : ps) given imps = --  Give PImps instead
+      let sc = addImpl imp_meths ist sc' in                   --  of PTacImplicits
+        case find n imps [] of                                --  now unless we
+            Just (tm, imps') ->                               --  actually use the
+              PImp p False l n tm :                           --  default arg.
+                insertImpl' ps given imps'
             Nothing ->
               if inpat
-                then PTacImplicit p l n sc Placeholder :
-                  insImpAcc (M.insert n Placeholder pnas) ps given imps
+                then PImp p True l n Placeholder :
+                  insertImpl' ps given imps
                 else PTacImplicit p l n sc sc :
-                  insImpAcc (M.insert n sc pnas) ps given imps
-    insImpAcc _ expected [] imps = map addUnknownImp imps -- so that unused implicits give error
-    insImpAcc _ _        given imps = given ++ imps
+                  insertImpl' ps given imps
+    insertImpl' expected [] imps = map addUnknownImp imps -- so that unused implicits give error
+    insertImpl' _        given imps = given ++ imps
 
     addUnknownImp arg = arg { argopts = UnknownImp : argopts arg }
 
