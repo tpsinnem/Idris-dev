@@ -1,29 +1,68 @@
-- Given the most recent note, should I dare to feel like I might suddenly be 
+- So..?
+  - Add 'defer_solve' to ProofState?
+  - Manage 'defer_solve' together with 'dontunify' somehow?
+
+- One option (in the relevant scenario) might be to leave the argument hole
+  names out of ProofState.holes entirely, until all the arguments have been
+  elaborated.
+  - That'd probably be too weird.
+
+- I already thought of this way back, and think I did write it down somewhere,
+  but I'll note again that I might need to extend the mechanism of 'deferring
+  solving' (cf. 'dontunify') to *all argument holes* that default argument
+  insertion process hasn't passed yet -- this process probably being
+  'elabArgs'.
+  - What form did the arguments have that are fed to 'apply'? What permits
+    some of the holes getting filled at that stage already?
+    - 'apply' doesn't take actual args at all? Just priorities and placeholder
+      status? (!)
+    - This filling is of course possible for those args that can be [inferred]
+      automatically. Which I'm pretty sure I'm running into.
+  - What form would this deferral take? Add a piece of info to each hole in
+    'holes' in ProofState?
+    - Would this simply be a Bool or would I need some more structure?
+      - I imagine I *could* have a stack of info about what function
+        applications we are in while elaborating, and have each hole 'tagged'
+        with the application it was introduced in. Then, when deciding whether
+        to solve a hole, we look at whether we are still elaborating the
+        application that hole was introduced in, and will not solve if that
+        is the case.
+        - But is this necessary?
+|
+- No, it goes beyond that! Solving has to be blocked even for those holes
+  that have 'been passed'! It's only safe to unify once all args have been
+  checked for possible default insertion! (!!)
+
+- Might I want to not do a full 'elabArgs' between the planned 'prepare_apply'
+  and the not-yet-existent 'finish_apply', but something more limited? (!?)
+  - This is probably not a thought that makes a lot of sense.
+
+- Given the most recent note, should I dare to feel like I might suddenly be
   quite far into having finally solved this thing? :O
 
-- [*After* the notes below:] Hmhm should we instead replace the call to 
-  'apply' with something like 'prepare_apply', or simply 'prepare_apply' 
+- [*After* the notes below:] Hmhm should we instead replace the call to
+  'apply' with something like 'prepare_apply', or simply 'prepare_apply'
   itself? (!!?)
-  - We'd then split out the 'post-prepare_apply' parts of 'apply' into its 
+  - We'd then split out the 'post-prepare_apply' parts of 'apply' into its
     own function. (!)
 |
 - Should I do things by modifying 'apply', or is that overkill?
   - Is there a reasonable way to do otherwise?
-    - Would it not be the case that we'd have to open another set of holes, 
-      which would be awkward given the already-still-partially-existing 
+    - Would it not be the case that we'd have to open another set of holes,
+      which would be awkward given the already-still-partially-existing
       set of holes left over from apply?
 |
-- Or should I clone and modify 'apply' into an 'apply_with_defaults' or 
+- Or should I clone and modify 'apply' into an 'apply_with_defaults' or
   something? (!?)
 |
-- If I work by modifying 'apply', do I need to work with defaults before 
+- If I work by modifying 'apply', do I need to work with defaults before
   'fillt' is invoked? (!!?)
 
-- Are we doing something possibly necessary in our elabArgs to turn the (in my 
-  recollection) PTerm-form default argument into something compatible with all 
+- Are we doing something possibly necessary in our elabArgs to turn the (in my
+  recollection) PTerm-form default argument into something compatible with all
   the (TT-form) stuff handed over from 'apply'? (!?)
   - (Does this make any sense?)
-  - It seems elabArgs basically works with PTerms/PArgs throughout, so I 
+  - It seems elabArgs basically works with PTerms/PArgs throughout, so I
     suppose the answer is no.
 
 - Did I ever try to drop 'end_unify' from 'apply'? (!?)
@@ -40,41 +79,41 @@
     - Or was it output from somewhere else?
   - Anyhow, the (recently modified) debug string with the env stuff.
     - See note below!
-      - Let me pat myself on the back for having made useful notes for a 
+      - Let me pat myself on the back for having made useful notes for a
         change...
 
 - Many notes here will be slightly or not-so-slightly confused and confusing,
-  and may involve laborious attempts at recollecting relevant details of work 
+  and may involve laborious attempts at recollecting relevant details of work
   that I did not have time to write down when I stopped in October 2015.
 |
-- In work after 5756c17b6066142de8ce79c8a6a8b4ee80a3527d, I get one of my 
+- In work after 5756c17b6066142de8ce79c8a6a8b4ee80a3527d, I get one of my
   debug messages while typechecking libs/prelude/Prelude/Nat.idr:
   env: [({__argTy104},Hole {binderTy = Type 0}),({iType102},Hole {binderTy = Type 0})] varn: {m510}.
-  - Now, I'll try to remember things: What should I be presuming to be the 
+  - Now, I'll try to remember things: What should I be presuming to be the
     role and origin of 'm510' here?
-    - Was m510 a hole name for something that I expected to *still be* a hole, 
+    - Was m510 a hole name for something that I expected to *still be* a hole,
       but is instead a hole that no longer exists?
       - What names do the holes created [in 'apply' [?]] get?
-        - Judging from 'prepare_apply', names pretty much precisely like that 
+        - Judging from 'prepare_apply', names pretty much precisely like that
           'm510'!
       - I'm somewhat confident that it's from 'prepare_apply' in 'apply'.
-        - But does that make sense? Should it be left over for my code [(*)] 
+        - But does that make sense? Should it be left over for my code [(*)]
           to confuse itself with, if the hole is closed *during apply*?
           - Maybe it isn't closed during 'apply', but some time after?
-          - Find out whether 'apply' returns names of holes that were already 
+          - Find out whether 'apply' returns names of holes that were already
             closed!
-            - 'end_unify' in 'apply' at least *closes* holes -- but are those 
-              hole names taken care of in the way that I'm assuming would make 
-              sense, i.e. left out from the list of hole names that 'apply' 
+            - 'end_unify' in 'apply' at least *closes* holes -- but are those
+              hole names taken care of in the way that I'm assuming would make
+              sense, i.e. left out from the list of hole names that 'apply'
               returns?
               - Does not seem so! (!!)
                 - Or, hmmmh, does 'updateUnify' do exactly that?
           |
           - I had another thought as well. What was it?
-            - Ah: How were 'ns' from 'apply' used before my changes, i.e. in 
+            - Ah: How were 'ns' from 'apply' used before my changes, i.e. in
               'master'? Were those passed to elabArgs at all?
               - They *are* passed to elabArgs. Now, how are they used?
-                - Each one is *only used if it's found among the actual holes 
+                - Each one is *only used if it's found among the actual holes
                   that still exist*! (!!!)
                 |
                 - I.e. many of them can well be useless!
