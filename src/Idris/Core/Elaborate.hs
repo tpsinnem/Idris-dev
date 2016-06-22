@@ -625,18 +625,22 @@ prepare_apply fn imps =
     rebind hs t = t
 
 -- | Apply an operator, solving some arguments by unification or matching.
-apply, apply_defer,
-  match_apply :: Raw -- ^ The operator to apply
-                 -> [(Bool, Int)] -- ^ For each argument, whether to
-                                  -- attempt to solve it and the
-                                  -- priority in which to do so
-                 -> Elab' aux [(Name, Name)]
-apply       = apply' fill False
+apply, match_apply :: Raw -- ^ The operator to apply
+                   -> [(Bool, Int)] -- ^ For each argument, whether to
+                                    -- attempt to solve it and the
+                                    -- priority in which to do so
+                   -> Elab' aux [(Name, Name)]
+apply       = map (\(n,h,oh) -> (n,h)) $ apply' fill False
+match_apply = map (\(n,h,oh) -> (n,h)) $ apply' match_fill False
+
+-- | Like apply, but defer the solving of created argument holes (whose names
+--   are given as the third members of returned list elements) until such
+--   deferrals are released.
+apply_defer :: Raw -> [(Bool, Int)] -> Elab' aux [(Name, Name, Name)]
 apply_defer = apply' fill True
-match_apply = apply' match_fill False
 
 apply' :: Bool -> (Raw -> Elab' aux ()) -> Raw -> [(Bool, Int)]
-          -> Elab' aux [(Name, Name)]
+          -> Elab' aux [(Name, Name, Name)]
 apply' defer_args fillt fn imps =
     do args <- prepare_apply fn (map fst imps)
        -- _Don't_ solve the arguments we're specifying by hand.
@@ -665,7 +669,11 @@ apply' defer_args fillt fn imps =
        traceWhen ulog
                  ("Goal " ++ show g ++ " -- when elaborating " ++ show fn)
                  end_unify
-       return $! (map (\(argName, argHole) -> (argName, updateUnify unify argHole)) args)
+       -- TODO (tpsinnem) Try to understand the role of updateUnify here. Can
+       -- we avoid having that as well as plain 'argHole' as their own separate
+       -- return elements?
+       return $! (map (\(argName, argHole)
+                       -> (argName, updateUnify unify argHole, argHole)) args)
   where updateUnify us n = case lookup n us of
                                 Just (P _ t _) -> t
                                 _ -> n
