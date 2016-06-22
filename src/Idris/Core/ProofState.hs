@@ -42,6 +42,11 @@ data ProofState = PS { thname   :: Name,
                        pterm    :: ProofTerm,   -- ^ current proof term
                        ptype    :: Type,   -- ^ original goal
                        dontunify :: [Name], -- ^ explicitly given by programmer, leave it
+                       defer_solve :: [Name], -- ^ holes to not be solved (i.e. closed
+                                              --   and substituted into scope) until all
+                                              --   arguments in an application have been
+                                              --   elaborated, to facilitate correct
+                                              --   elaboration of Idris default arguments.
                        unified  :: (Name, [(Name, Term)]),
                        notunified :: [(Name, Term)],
                        dotted   :: [(Name, [Name])], -- ^ dot pattern holes + environment
@@ -879,7 +884,7 @@ solve_unified :: RunTactic
 solve_unified ctxt env tm =
     do ps <- get
        let (_, ns) = unified ps
-       let unify = dropGiven (dontunify ps) ns (holes ps)
+       let unify = dropGiven (dontunify ps ++ defer_solve ps) ns (holes ps)
        action (\ps -> ps { holes = traceWhen (unifylog ps) ("Dropping holes " ++ show (map fst unify)) $
                                      holes ps \\ map fst unify,
                            recents = recents ps ++ map fst unify })
@@ -1094,9 +1099,11 @@ processTactic t ps
                                                 ("SOLVED " ++ show s ++ " " ++ show (dontunify ps')) $
                                                 updateProblems ps' [s] (problems ps')
                                     _ -> ([], problems ps')
+                     let dont = dontunify ps'
+                     let defer = defer_solve ps'
                      -- rechecking problems may find more solutions, so
                      -- apply them here
-                     let ns' = dropGiven (dontunify ps') ns_in (holes ps')
+                     let ns' = dropGiven (dont ++ defer) ns_in (holes ps')
                      let pterm'' = updateSolved ns' (pterm ps')
                      traceWhen (unifylog ps)
                                  ("Updated problems after solve " ++ qshow probs' ++ "\n" ++

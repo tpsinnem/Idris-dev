@@ -1,3 +1,12 @@
+- Now:
+  - Actually add 'defer_solve' to ProofState.
+  - Actually write into 'defer_solve' in apply_defer.
+  - Make so that deferrals are released once args are elaborated.
+    - What the heck to think about the hole name switcheroo on the 'apply'
+      return value? D: (!?)
+|
+- (And, then, adapt translateDefaults stuff etc. from the old branch.) (!)
+
 - So..?
   - Add 'defer_solve' to ProofState?
   - Manage 'defer_solve' together with 'dontunify' somehow?
@@ -22,6 +31,10 @@
     - Some possible reasoning: Will it not be the case that we end up with
       'problems' only once we've *tried* to unify? And we won't have tried
       on holes that are still deferred? (!?)
+  - Do we need to touch 'patvar' in ProofState.hs? (!?)
+  - unify' is a bit of a puzzle. Look at use sites to see whether we should
+    defer_solve things there. (!)
+    - Doesn't seem to be associated with anything undesireable.
 |
 - Preliminary side note: How, precisely, will we know what to remove from
   'defer_solve' once we've elaborated args?
