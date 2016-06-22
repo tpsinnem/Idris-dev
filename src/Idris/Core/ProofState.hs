@@ -970,6 +970,14 @@ updateProblems ps updates probs = rec 10 updates probs
   ulog = unifylog ps
   usupp = map fst (notunified ps)
   dont = dontunify ps
+  defer = defer_solve ps -- TODO THINK FIXME Is this the right place for defer?
+                         -- Is it possible to leave the defer stuff to a later
+                         -- stage that actually drops the holes?
+                         -- - Study call sites of updateProblems.
+                         --   - processTactic EndUnify seems to filter out
+                         --     dontunify from its arguments to updateProblems,
+                         --     for example.
+                         --     - But are there others that don't do similar?
 
   up ns acc [] = (ns, map (updateNs ns) (reverse acc))
   up ns acc (prob@(x, y, ready, env, err, while, um) : ps) =
@@ -981,8 +989,11 @@ updateProblems ps updates probs = rec 10 updates probs
           if newx || newy || ready ||
              any (\n -> n `elem` inj) (refsIn x ++ refsIn y) then
             case unify ctxt env' (x', lp) (y', rp) inj hs usupp while of
+                 -- TODO THINK FIXME show 'defer' also?
                  OK (v, []) -> traceWhen ulog ("DID " ++ show (x',y',ready,v,dont)) $
-                                let v' = filter (\(n, _) -> n `notElem` dont) v in
+                                let v' = filter -- TODO THINK FIXME see above on defer.
+                                           (\(n, _) -> n `notElem` (dont ++ defer))
+                                           v in
                                     up (ns ++ v') acc ps
                  e -> -- trace ("FAILED " ++ show (x',y',ready,e)) $
                       up ns ((x',y',False,env',err',while,um) : acc) ps
@@ -1032,7 +1043,7 @@ processTactic Undo ps = case previous ps of
                             Just pold -> return (pold, "")
 processTactic EndUnify ps
     = let (h, ns_in) = unified ps
-          ns = dropGiven (dontunify ps) ns_in (holes ps)
+          ns = dropGiven (dontunify ps ++ defer_solve ps) ns_in (holes ps)
           ns' = map (\ (n, t) -> (n, updateSolvedTerm ns t)) ns
           (ns'', probs') = updateProblems ps ns' (problems ps)
           tm' = updateSolved ns'' (pterm ps) in

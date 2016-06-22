@@ -625,16 +625,19 @@ prepare_apply fn imps =
     rebind hs t = t
 
 -- | Apply an operator, solving some arguments by unification or matching.
-apply, match_apply :: Raw -- ^ The operator to apply
-                   -> [(Bool, Int)] -- ^ For each argument, whether to
-                                    -- attempt to solve it and the
-                                    -- priority in which to do so
-                   -> Elab' aux [(Name, Name)]
-apply = apply' fill
-match_apply = apply' match_fill
+apply, apply_defer,
+  match_apply :: Raw -- ^ The operator to apply
+                 -> [(Bool, Int)] -- ^ For each argument, whether to
+                                  -- attempt to solve it and the
+                                  -- priority in which to do so
+                 -> Elab' aux [(Name, Name)]
+apply       = apply' fill False
+apply_defer = apply' fill True
+match_apply = apply' match_fill False
 
-apply' :: (Raw -> Elab' aux ()) -> Raw -> [(Bool, Int)] -> Elab' aux [(Name, Name)]
-apply' fillt fn imps =
+apply' :: Bool -> (Raw -> Elab' aux ()) -> Raw -> [(Bool, Int)]
+          -> Elab' aux [(Name, Name)]
+apply' defer_args fillt fn imps =
     do args <- prepare_apply fn (map fst imps)
        -- _Don't_ solve the arguments we're specifying by hand.
        -- (remove from unified list before calling end_unify)

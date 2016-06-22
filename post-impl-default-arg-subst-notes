@@ -1,6 +1,32 @@
 - So..?
   - Add 'defer_solve' to ProofState?
   - Manage 'defer_solve' together with 'dontunify' somehow?
+  |
+  - How, precisely, do we want to ensure that 'defer_solve'd holes are kept
+    from being solved?
+    - Is this to be independent of 'unified' and 'notunified'?
+      - Need to take a look once again at how end_unify and others decide
+        things. Need to keep taking looks, probably.
+      - I guess 'notunified' at least shouldn't have anything to do with this.
+    - Probably a good way to get clarity would indeed be to look at all the
+      places where 'dontunify' is inspected. (!!)
+    |
+    - Things probably won't be so simple as merely concatenating 'defer_solve'
+      to things like 'let dont = dontunify' at all the use sites. In at least
+      some cases it seems like such 'dont's are used also for stuff I don't
+      want for defer_solve, such as adding to stuff to be added to
+      'notunified'. So presumably I'll want to do something like have a
+      'let defer = defer_solve p' and then use a lot of 'dont ++ defer'. (!)
+  - 'updateProblems' call site in 'processTactic UnifyProblems'. What to do
+    here, for example? Should I 'defer_solve' stuff in 'problems'?
+    - Some possible reasoning: Will it not be the case that we end up with
+      'problems' only once we've *tried* to unify? And we won't have tried
+      on holes that are still deferred? (!?)
+|
+- Preliminary side note: How, precisely, will we know what to remove from
+  'defer_solve' once we've elaborated args?
+  - The return value from 'apply_defer'? Hopefully it indeed will be trust-
+    worthy.
 
 - One option (in the relevant scenario) might be to leave the argument hole
   names out of ProofState.holes entirely, until all the arguments have been
