@@ -4,6 +4,8 @@
   - Make so that deferrals are released once args are elaborated.
     - What the heck to think about the hole name switcheroo on the 'apply'
       return value? D: (!?)
+      - I just added it as an extra element and adapted the normal 'apply'
+        functions to drop that element in their own return values.
 |
 - (And, then, adapt translateDefaults stuff etc. from the old branch.) (!)
 
