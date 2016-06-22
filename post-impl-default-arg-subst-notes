@@ -1,0 +1,132 @@
+- Given the most recent note, should I dare to feel like I might suddenly be 
+  quite far into having finally solved this thing? :O
+
+- [*After* the notes below:] Hmhm should we instead replace the call to 
+  'apply' with something like 'prepare_apply', or simply 'prepare_apply' 
+  itself? (!!?)
+  - We'd then split out the 'post-prepare_apply' parts of 'apply' into its 
+    own function. (!)
+|
+- Should I do things by modifying 'apply', or is that overkill?
+  - Is there a reasonable way to do otherwise?
+    - Would it not be the case that we'd have to open another set of holes, 
+      which would be awkward given the already-still-partially-existing 
+      set of holes left over from apply?
+|
+- Or should I clone and modify 'apply' into an 'apply_with_defaults' or 
+  something? (!?)
+|
+- If I work by modifying 'apply', do I need to work with defaults before 
+  'fillt' is invoked? (!!?)
+
+- Are we doing something possibly necessary in our elabArgs to turn the (in my 
+  recollection) PTerm-form default argument into something compatible with all 
+  the (TT-form) stuff handed over from 'apply'? (!?)
+  - (Does this make any sense?)
+  - It seems elabArgs basically works with PTerms/PArgs throughout, so I 
+    suppose the answer is no.
+
+- Did I ever try to drop 'end_unify' from 'apply'? (!?)
+
+- Where was (the relevant part of) 'my code' (see [(*)] below)?
+  - In elabArgs?
+    - Yeah, that is at least a significant part of it.
+
+- Now, what was I doing before I had to yak-shave the NIX_PATH?
+  - Aside from trying to get a stack/cabal repl to work so I could create tags?
+    - What was I going to use tags for, btw? What code was I looking at? (!!)
+      - Did it relate to the stack trace?
+  - I was looking at some of the output from 'make'?
+    - Or was it output from somewhere else?
+  - Anyhow, the (recently modified) debug string with the env stuff.
+    - See note below!
+      - Let me pat myself on the back for having made useful notes for a 
+        change...
+
+- Many notes here will be slightly or not-so-slightly confused and confusing,
+  and may involve laborious attempts at recollecting relevant details of work 
+  that I did not have time to write down when I stopped in October 2015.
+|
+- In work after 5756c17b6066142de8ce79c8a6a8b4ee80a3527d, I get one of my 
+  debug messages while typechecking libs/prelude/Prelude/Nat.idr:
+  env: [({__argTy104},Hole {binderTy = Type 0}),({iType102},Hole {binderTy = Type 0})] varn: {m510}.
+  - Now, I'll try to remember things: What should I be presuming to be the 
+    role and origin of 'm510' here?
+    - Was m510 a hole name for something that I expected to *still be* a hole, 
+      but is instead a hole that no longer exists?
+      - What names do the holes created [in 'apply' [?]] get?
+        - Judging from 'prepare_apply', names pretty much precisely like that 
+          'm510'!
+      - I'm somewhat confident that it's from 'prepare_apply' in 'apply'.
+        - But does that make sense? Should it be left over for my code [(*)] 
+          to confuse itself with, if the hole is closed *during apply*?
+          - Maybe it isn't closed during 'apply', but some time after?
+          - Find out whether 'apply' returns names of holes that were already 
+            closed!
+            - 'end_unify' in 'apply' at least *closes* holes -- but are those 
+              hole names taken care of in the way that I'm assuming would make 
+              sense, i.e. left out from the list of hole names that 'apply' 
+              returns?
+              - Does not seem so! (!!)
+                - Or, hmmmh, does 'updateUnify' do exactly that?
+          |
+          - I had another thought as well. What was it?
+            - Ah: How were 'ns' from 'apply' used before my changes, i.e. in 
+              'master'? Were those passed to elabArgs at all?
+              - They *are* passed to elabArgs. Now, how are they used?
+                - Each one is *only used if it's found among the actual holes 
+                  that still exist*! (!!!)
+                |
+                - I.e. many of them can well be useless!
+                - (BTW what's the role of the 'argName's?) (!??)
+
+
+---- Long, abrupt break -------
+
+
+- Might it be ok to do 'refocus' on the next hole after each arg in elabArgs?
+  That might be a thing I need to do? (!!)
+  - See if elabArgs needs something specific with current proof term that'd
+    conflict with this idea.
+    - Looks like it doesn't?
+
+- Are the 'hole names' from 'apply' reliable at all? How would we get the
+  actual hole names? (!!)
+  - Manually from the proof term?
+
+- Does unifyProblems that's done before elabArgs get rid of the holes that we'd
+  need? (!!!)
+  - I removed it but things still fail.
+
+- How might I make elabArgs successsfully use the hole names in the modified
+  default argument? (!!!)
+
+- Are the names from idris_implicits etc still usable at elabArgs, after
+  the uniqueNames stuff that's been done?
+  - Actually I get the impression that names already in context won't get
+    touched.
+
+- Return insertImpl to roughly what it was before the original default argument
+  substitution patch? (!)
+  - Rename insImpAcc to insertImpl' and remove any accumulation stuff?
+|
+- Do kind of what insImpAcc does now, but in elabArgs, and with the holes from
+  'apply' instead of with the arg terms? (!)
+|
+- I suspect I'll want to modify things so that elabArgs does the required work,
+  and gets the necessary info for doing so. (!!)
+  - PArgs instead of PTerms?
+
+- Reducible return types in a type declaration are only handled with TT info,
+  so default arguments won't get filled into them even if something would
+  otherwise reduce into an Idris Pi type with a default argument. (!)
+  - So, I suppose that's a case I won't be dealing with anytime soon. (!)
+
+- I already pondered where implicit args are added to args that themselves are
+  applications: I think this happens in 'elabArgs' which is called some time
+  after 'apply'.
+
+- Huh. 'apply' in Idris/Core/Elaborate.hs just outputs param names and *names
+  of their holes*! I suspect I can do stuff after apply is called in
+  Idris/Elab/Term.hs (!!!)
+  - https://github.com/idris-lang/Idris-dev/blob/0f89577db795eaa8c809e8247dba025b2652dc3c/src/Idris/Elab/Term.hs#L842
