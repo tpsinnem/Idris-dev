@@ -870,7 +870,8 @@ elab ist info emode opts fn tm
                                 unifyProblems
                     let guarded = isConName f ctxt
 --                    trace ("args is " ++ show args) $ return ()
-                    ns <- apply (Var f) (map isph args)
+                    (a_args, a_holes, a_orig_holes) <- apply (Var f) (map isph args)
+                    let ns = (a_args, a_holes)
 --                    trace ("ns is " ++ show ns) $ return ()
                     -- mark any type class arguments as injective
                     when (not pattern) $ mapM_ checkIfInjective (map snd ns)
@@ -882,11 +883,14 @@ elab ist info emode opts fn tm
                     mapM (uncurry highlightSource) $
                       (ffc, annot) : map (\f -> (f, annot)) hls
 
+                    -- TODO FIXME Need to adapt changes to elabArgs from old branch.
                     elabArgs ist (ina { e_inarg = e_inarg ina || not isinf })
                            [] fc False f
                              (zip ns (unmatchableArgs ++ repeat False))
                              (f == sUN "Force")
                              (map (\x -> getTm x) args) -- TODO: remove this False arg
+                    release_defer_solve a_orig_holes
+
                     imp <- if (e_isfn ina) then
                               do guess <- get_guess
                                  env <- get_env

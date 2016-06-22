@@ -365,6 +365,11 @@ getLog :: Elab' aux String
 getLog = do ES p logs _ <- get
             return $! logs
 
+release_defer_solve :: [Name] -> Elab' aux ()
+release_defer_solve holes = do
+  ES (ps, aux) logs prev <- get
+  put (ES (ps { defer_solve = (defer_solve ps) \\ holes }, aux) logs prev)
+
 -- The primitives, from ProofState
 
 attack :: Elab' aux ()
