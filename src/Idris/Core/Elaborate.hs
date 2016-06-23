@@ -640,14 +640,14 @@ apply, match_apply :: Raw -- ^ The operator to apply
                                     -- attempt to solve it and the
                                     -- priority in which to do so
                    -> Elab' aux [(Name, Name)]
-apply       = map (\(n,h,oh) -> (n,h)) $ apply' fill False
-match_apply = map (\(n,h,oh) -> (n,h)) $ apply' match_fill False
+apply f i       = fmap (map (\(n,h,oh) -> (n,h))) (apply' False fill f i)
+match_apply f i = fmap (map (\(n,h,oh) -> (n,h))) (apply' False match_fill f i)
 
 -- | Like apply, but defer the solving of created argument holes (whose names
 --   are given as the third members of returned list elements) until such
 --   deferrals are released.
 apply_defer :: Raw -> [(Bool, Int)] -> Elab' aux [(Name, Name, Name)]
-apply_defer = apply' fill True
+apply_defer = apply' True fill
 
 apply' :: Bool -> (Raw -> Elab' aux ()) -> Raw -> [(Bool, Int)]
           -> Elab' aux [(Name, Name, Name)]

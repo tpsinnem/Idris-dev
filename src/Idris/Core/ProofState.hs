@@ -335,7 +335,7 @@ newProof n tcns ctxt datatypes globalNames ty =
   let h = holeName 0
       ty' = vToP ty
   in PS n [h] [] 1 globalNames (mkProofTerm (Bind h (Hole ty')
-        (P Bound h ty'))) ty [] (h, []) [] []
+        (P Bound h ty'))) ty [] [] (h, []) [] []
         Nothing [] []
         [] [] [] []
         Nothing ctxt datatypes "" False False [] [] tcns

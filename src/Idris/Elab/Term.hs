@@ -1532,9 +1532,9 @@ elab ist info emode opts fn tm
              -> Bool -- ^ under a 'force'
              -> [PArg] -- ^ argument
              -> ElabD ()
-    elabArgs ist ina failed fc r f ((as, hs, orig_hs), u) force args
+    elabArgs ist ina failed fc r f ns orig_hs force args
       = case lookupCtxtExact f (idris_implicits ist) of
-          Just params ->  elabArgs' ist ina failed fc r f ns orig_hs force 
+          Just params ->  elabArgs' ist ina failed fc r f ns force 
                                     (translateDefaults 
                                       (map pname params)
                                       orig_hs
