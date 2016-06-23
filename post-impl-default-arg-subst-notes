@@ -1,3 +1,8 @@
+- Idris compiles now, but Idris itself fails to compile its libraries, with
+  lots of error messages.
+  - Turn on logging, as a first step to figuring things out?
+  - Save the normal error output too?
+
 - Now working on adapting the elabArgs stuff from the old branch, and getting
   big doubts again whether I sufficiently understand what's going on with the
   hole name switching in 'apply' and how that might affect things.
