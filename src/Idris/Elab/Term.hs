@@ -870,11 +870,15 @@ elab ist info emode opts fn tm
                                 unifyProblems
                     let guarded = isConName f ctxt
 --                    trace ("args is " ++ show args) $ return ()
-                    (a_args, a_holes, a_orig_holes) <- apply (Var f) (map isph args)
-                    let ns = (a_args, a_holes)
+                    ns_with_orig <- apply_defer (Var f) (map isph args)
+                    let ns         = map (\(arg, hole, _) -> (arg, hole)) ns_with_orig
+                    let orig_holes = map (\(_, _, orig)   -> orig)        ns_with_orig
 --                    trace ("ns is " ++ show ns) $ return ()
                     -- mark any type class arguments as injective
                     when (not pattern) $ mapM_ checkIfInjective (map snd ns)
+
+                    -- TODO THINK FIXME should these now go after
+                    -- 'release_defer_solve orig_holes'?
                     unifyProblems -- try again with the new information,
                                   -- to help with disambiguation
                     ulog <- getUnifyLog
@@ -887,9 +891,10 @@ elab ist info emode opts fn tm
                     elabArgs ist (ina { e_inarg = e_inarg ina || not isinf })
                            [] fc False f
                              (zip ns (unmatchableArgs ++ repeat False))
+                             orig_holes
                              (f == sUN "Force")
-                             (map (\x -> getTm x) args) -- TODO: remove this False arg
-                    release_defer_solve a_orig_holes
+                             args -- TODO: remove this False arg
+                    release_defer_solve orig_holes
 
                     imp <- if (e_isfn ina) then
                               do guess <- get_guess
@@ -1523,19 +1528,61 @@ elab ist info emode opts fn tm
              -> Bool
              -> Name -- ^ Name of the function being applied
              -> [((Name, Name), Bool)] -- ^ (Argument Name, Hole Name, unmatchable)
+             -> [Name] -- ^ Original hole names
+             -> Bool -- ^ under a 'force'
+             -> [PArg] -- ^ argument
+             -> ElabD ()
+    elabArgs ist ina failed fc r f ((as, hs, orig_hs), u) force args
+      = case lookupCtxtExact f (idris_implicits ist) of
+          Just params ->  elabArgs' ist ina failed fc r f ns orig_hs force 
+                                    (translateDefaults 
+                                      (map pname params)
+                                      orig_hs
+                                      args)
+          Nothing     ->  elabArgs' ist ina failed fc r f ns force (map getTm args)
+
+    -- For each default argument, replace instances of original parameter
+    -- names with the corresponding hole names that were given by 'apply'.
+    translateDefaults :: [Name] -> [Name] -> [PArg] -> [PTerm]
+    translateDefaults pnames holenames args
+      = trDeftsAcc M.empty pnames holenames args
+
+    trDeftsAcc :: M.Map Name PTerm -> [Name] -> [Name] -> [PArg] -> [PTerm]
+    trDeftsAcc m (pn : ps) (hn : hs) (PTacImplicit _ _ _ sc _ : args)
+      = substMatches (M.toList m) sc :  trDeftsAcc 
+                                          (M.insert pn (PRef NoFC [] hn) m)
+                                          ps hs args
+    trDeftsAcc m (pn : ps) (hn : hs) (a : args)
+      = getTm a : trDeftsAcc (M.insert pn (PRef NoFC [] hn) m) ps hs args
+    trDeftsAcc _ [] _ args = map getTm args
+    trDeftsAcc m ps hs args = error $ "Unexpected arguments when translating defaults. "
+                                ++ "m: " ++ show m
+                                ++ ", ps: " ++ show ps
+                                ++ ", hs: " ++ show hs
+                                ++ ", args: " ++ show args
+      --  TODO THINK perhaps FIXME: Are these actually unexpected?
+
+    elabArgs' :: IState -- ^ The current Idris state
+             -> ElabCtxt -- ^ (in an argument, guarded, in a type, in a qquote)
+             -> [Bool]
+             -> FC -- ^ Source location
+             -> Bool
+             -> Name -- ^ Name of the function being applied
+             -> [((Name, Name), Bool)] -- ^ (Argument Name, Hole Name, unmatchable)
              -> Bool -- ^ under a 'force'
              -> [PTerm] -- ^ argument
              -> ElabD ()
-    elabArgs ist ina failed fc retry f [] force _ = return ()
-    elabArgs ist ina failed fc r f (((argName, holeName), unm):ns) force (t : args)
-        = do hs <- get_holes
+    elabArgs' ist ina failed fc retry f [] force _ = return ()
+    elabArgs' ist ina failed fc r f (((argName, holeName), unm):ns) force (t : args)
+        = do refocusE holeName
+             hs <- get_holes
              if holeName `elem` hs then
                 do focus holeName
                    case t of
                       Placeholder -> do movelast holeName
-                                        elabArgs ist ina failed fc r f ns force args
+                                        elabArgs' ist ina failed fc r f ns force args
                       _ -> elabArg t
-                else elabArgs ist ina failed fc r f ns force args
+                else elabArgs' ist ina failed fc r f ns force args
       where elabArg t =
               do -- solveAutos ist fn False
                  now_elaborating fc f argName
@@ -1556,7 +1603,7 @@ elab ist info emode opts fn tm
                                   elab (ina { e_nomatching = unm && poly }) (Just fc) t
                                  return failed
                    done_elaborating_arg f argName
-                   elabArgs ist ina failed fc r f ns force args
+                   elabArgs' ist ina failed fc r f ns force args
             wrapErr f argName action =
               do elabState <- get
                  while <- elaborating_app
@@ -1567,7 +1614,7 @@ elab ist info emode opts fn tm
                                                        lift (tfail (elaboratingArgErr while' e))
                  put newState
                  return result
-    elabArgs _ _ _ _ _ _ (((arg, hole), _) : _) _ [] =
+    elabArgs' _ _ _ _ _ _ (((arg, hole), _) : _) _ [] =
       fail $ "Can't elaborate these args: " ++ show arg ++ " " ++ show hole
 
     addAutoBind :: Plicity -> Name -> ElabD ()

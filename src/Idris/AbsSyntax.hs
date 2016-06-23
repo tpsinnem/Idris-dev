@@ -2011,8 +2011,8 @@ aiFn topname inpat expat qq imp_meths ist fc f ffc ds as
               if inpat
                 then PImp p True l n Placeholder :
                   insertImpl' ps given imps
-                else PTacImplicit p l n sc sc :
-                  insertImpl' ps given imps
+                else PTacImplicit p l n sc Placeholder : -- Fill Placeholder later with
+                  insertImpl' ps given imps                 -- modified sc.
     insertImpl' expected [] imps = map addUnknownImp imps -- so that unused implicits give error
     insertImpl' _        given imps = given ++ imps
 

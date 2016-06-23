@@ -247,6 +247,11 @@ update_term f = do ES (p,a) logs prev <- get
                    let p' = p { pterm = mkProofTerm (f (getProofTerm (pterm p))) }
                    put (ES (p', a) logs prev)
 
+refocusE :: Name -> Elab' aux ()
+refocusE n = do ES (p,a) logs prev <- get
+                let p' = p { pterm = refocus (Just n) (pterm p) }
+                put (ES (p', a) logs prev)
+
 -- | get the local context at the currently in focus hole
 get_env :: Elab' aux Env
 get_env = do ES p _ _ <- get

@@ -1,3 +1,50 @@
+- Now working on adapting the elabArgs stuff from the old branch, and getting
+  big doubts again whether I sufficiently understand what's going on with the
+  hole name switching in 'apply' and how that might affect things.
+  - What is actually *done* with the modified hole names in the original
+    elabArgs?
+    - There's at least one other bit, but one thing is that apparently we
+      *skip* elaboration of arguments if the hole name isn't among 'holes' of
+      the ProofState!
+      - When would that happen? Does this have specifically to do with the
+        odd switcheroo in 'apply'?
+      - And *why* is this done?
+      - Should I try to respect this procedure? By which I mean..?
+        - By which I mean to assume that the skipping is OK and will not
+          concern any holes that I'm trying to deal with, and possibly also, in
+          that case, it would also not matter w.r.t. translateDefaults that
+          some of the names are weird?
+          - If the funny names are not among 'holes', then presumably they will
+            also not get solved off beneath our feet..?
+          - Might it be the case (wishful thinking, here..) that it *wouldn't
+            matter* which set of names I use in translateDefaults?
+            - Hm hm hm I'm definitely leaning on using the original ones. They
+              should be the ones that match the actual proof term, which is
+              what governs how the actual substitution happens once the holes
+              are solved, no?
+          - Now, should I assume that the 'weird' holes won't be ones that have
+            my actual default arguments (and I mean the arguments themselves,
+            not the possibly referenced other previous arguments)?
+            - Could I actually figure that out by looking at form of the
+              relevant data, the 'P foo bar' or somesuch stuff?
+            - Actually I have something of a hunch that they indeed won't be,
+              since those (*afaiu*) shouldn't end up among 'unify', which would
+              be what triggers the weirdness.
+              - I'll want to check, though, whether I actually had some changes
+                in something like insertImpl that was needed to ensure that I
+                don't have placeholders in places where I shouldn't have
+                placeholders lest it would actually cause such an above
+                alluded misfortune.
+                - Though maybe that was a thing in the ill-fated
+                  'lift-placeholders' branch.
+                  - No, well, it seems to still be present in the first 'new
+                    wip' branch, although it actually comes with a FIXME note
+                    questioning its necessity. (!)
+    - Do the hole names actually coordinate in any way with the actual args
+      there?
+      - I suppose, in the sense that if a hole name isn't in 'holes', the
+        'corresponding' argument doesn't get elaborated.
+
 - Now:
   - Actually add 'defer_solve' to ProofState.
   - Actually write into 'defer_solve' in apply_defer.
